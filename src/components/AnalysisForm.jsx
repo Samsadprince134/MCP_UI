@@ -1,228 +1,440 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
 import Loader from "./Loader";
 import ResultCard from "./ResultCard";
-import ModifyModal from "./ModifyModal";
+import Notification from "./Notification";
 
 const AnalysisForm = () => {
 
-  const [repoUrl, setRepoUrl] = useState("");
- // const [localPath, setLocalPath] = useState("");
+  const [projectPath, setProjectPath] = useState("");
 
   const [loading, setLoading] = useState(false);
 
-  const [result, setResult] = useState(null);
+  const [events, setEvents] = useState([]);
 
-  const [showModify, setShowModify] = useState(false);
+  const [runId, setRunId] = useState("");
 
-  const [modifyPrompt, setModifyPrompt] = useState("");
+  const [notification, setNotification] = useState("");
 
-  const [reportVersion, setReportVersion] = useState(1);
+  const [notificationType, setNotificationType] = useState("");
 
-  const [regenerating, setRegenerating] = useState(false);
+  // AUTO SCROLL REF
 
-  // INITIAL MCP ANALYSIS
-  const handleAnalyze = async () => {
+  const bottomRef = useRef(null);
+
+  // PROFESSIONAL SMOOTH AUTO SCROLL
+
+  useEffect(() => {
+
+    const smoothScrollToBottom = () => {
+
+      const startPosition = window.scrollY;
+
+      const targetPosition =
+        document.documentElement.scrollHeight - window.innerHeight;
+
+      const distance = targetPosition - startPosition;
+
+      const duration = 1200;
+
+      let startTime = null;
+
+      const easeInOutCubic = (t) => {
+
+        return t < 0.5
+          ? 4 * t * t * t
+          : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      };
+
+      const animation = (currentTime) => {
+
+        if (!startTime)
+          startTime = currentTime;
+
+        const timeElapsed = currentTime - startTime;
+
+        const progress = Math.min(timeElapsed / duration, 1);
+
+        const ease = easeInOutCubic(progress);
+
+        window.scrollTo(
+          0,
+          startPosition + distance * ease
+        );
+
+        if (timeElapsed < duration) {
+          requestAnimationFrame(animation);
+        }
+      };
+
+      requestAnimationFrame(animation);
+    };
+
+    smoothScrollToBottom();
+
+  }, [events, loading]);
+
+  // START PIPELINE
+
+  const startPipeline = async () => {
+
+    // EMPTY INPUT VALIDATION
+
+    if (!projectPath.trim()) {
+
+      setNotificationType("error");
+
+      setNotification(
+        "Project path is required. Please enter a valid project directory."
+      );
+
+      setTimeout(() => {
+        setNotification("");
+      }, 5000);
+
+      return;
+    }
 
     try {
 
       setLoading(true);
 
-      setResult(null);
+      setEvents([]);
+
+      setRunId("");
 
       const response = await axios.post(
-        "http://localhost:8080/api/mcp/analyze",
+        "http://13.127.9.92:8000/api/pipeline/run",
         {
-          repoUrl,
-         // localPath
+          project_path: projectPath
         }
       );
 
-      setResult(response.data);
+      // INVALID RESPONSE CHECK
 
-      setReportVersion(1);
-
-    } catch (error) {
-
-      console.log(error);
-
-      // MOCK RESPONSE FOR DEMO
-      setTimeout(() => {
-
-        setResult({
-          status: "SUCCESS",
-          coverage: 87,
-          testsPassed: 142,
-          compliance: "PASSED",
-          summary:
-            "Initial MCP analysis completed successfully. Compilation, validation, test execution, and compliance checks passed.",
-          logs: [
-            "Validator completed successfully",
-            "Compilation successful",
-            "Test execution completed",
-            "Jacoco coverage generated",
-            "Compliance checks passed",
-            "Jenkins trigger successful"
-          ]
-        });
-
-        setReportVersion(1);
+      if (!response.data?.stream_url) {
 
         setLoading(false);
 
-      }, 2000);
+        setNotificationType("error");
 
-      return;
-    }
+        setNotification(
+          "Invalid response received from MCP backend."
+        );
 
-    setLoading(false);
-  };
+        setTimeout(() => {
+          setNotification("");
+        }, 5000);
 
-  // HUMAN FEEDBACK LOOP
-  const handleRegenerate = async () => {
+        return;
+      }
 
-    try {
+      setRunId(response.data.run_id);
 
-      setRegenerating(true);
+      setNotificationType("info");
 
-      const response = await axios.post(
-        "http://localhost:8080/api/mcp/regenerate-report",
-        {
-          previousReport: result,
-          userPrompt: modifyPrompt
-        }
+      setNotification(
+        "Pipeline execution started successfully."
       );
 
-      setResult(response.data);
+      setTimeout(() => {
+        setNotification("");
+      }, 4000);
 
-      setReportVersion((prev) => prev + 1);
+      const streamUrl =
+        `http://13.127.9.92:8000${response.data.stream_url}`;
 
-      setModifyPrompt("");
-
-      setShowModify(false);
+      connectToStream(streamUrl);
 
     } catch (error) {
 
       console.log(error);
 
-      // MOCK UPDATED RESPONSE
+      setLoading(false);
+
+      setNotificationType("error");
+
+      setNotification(
+        "Unable to start pipeline. Please check the backend server."
+      );
+
       setTimeout(() => {
-
-        setResult({
-          status: "SUCCESS",
-          coverage: 91,
-          testsPassed: 151,
-          compliance: "PASSED",
-          summary:
-            "Enhanced AI-generated report with detailed compliance analysis, failed test explanation, optimization recommendations, and refined validation insights based on user feedback.",
-          logs: [
-            "User feedback received",
-            "Prompt refinement completed",
-            "AI report regeneration completed",
-            "Coverage optimization analysis added",
-            "Enhanced compliance summary generated",
-            "Updated report ready"
-          ]
-        });
-
-        setReportVersion((prev) => prev + 1);
-
-        setModifyPrompt("");
-
-        setShowModify(false);
-
-        setRegenerating(false);
-
-      }, 2500);
-
-      return;
+        setNotification("");
+      }, 5000);
     }
+  };
 
-    setRegenerating(false);
+  // CONNECT TO SSE STREAM
+
+  const connectToStream = (url) => {
+
+    const eventSource = new EventSource(url);
+
+    eventSource.onmessage = (event) => {
+
+      if (!event.data) return;
+
+      const parsedData = JSON.parse(event.data);
+
+      console.log(parsedData);
+
+      // INPUT ERROR → STOP EVERYTHING
+
+      if (
+        parsedData.data?.stage === "input_error"
+      ) {
+
+        setEvents((prev) => [
+          ...prev,
+          {
+            ...parsedData,
+            data: {
+              ...parsedData.data,
+              message:
+                "The provided project path does not exist or is invalid. Please enter a correct project directory."
+            }
+          }
+        ]);
+
+        setNotificationType("error");
+
+        setNotification(
+          "Invalid project path. Pipeline execution stopped."
+        );
+
+        setLoading(false);
+
+        eventSource.close();
+
+        setTimeout(() => {
+          setNotification("");
+        }, 6000);
+
+        return;
+      }
+
+      // ADD NORMAL EVENTS
+
+      setEvents((prev) => [...prev, parsedData]);
+
+      // PIPELINE FAILED
+
+      if (parsedData.type === "failed") {
+
+        setNotificationType("error");
+
+        setNotification(
+          parsedData.data?.message ||
+          parsedData.data?.error ||
+          "Pipeline execution failed."
+        );
+
+        setLoading(false);
+
+        eventSource.close();
+
+        setTimeout(() => {
+          setNotification("");
+        }, 7000);
+
+        return;
+      }
+
+      // PIPELINE PAUSED
+
+      if (parsedData.type === "paused") {
+
+        setNotificationType("error");
+
+        // DYNAMIC ERROR MESSAGE
+
+        const dynamicMessage =
+          parsedData.data?.message ||
+          parsedData.data?.reason ||
+          "Pipeline execution paused.";
+
+        setNotification(dynamicMessage);
+
+        setLoading(false);
+
+        eventSource.close();
+
+        setTimeout(() => {
+          setNotification("");
+        }, 7000);
+
+        return;
+      }
+
+      // PIPELINE COMPLETED
+
+      if (parsedData.type === "completed") {
+
+        setNotificationType("success");
+
+        setNotification(
+          parsedData.data?.message ||
+          "Pipeline execution completed successfully."
+        );
+
+        setLoading(false);
+
+        eventSource.close();
+
+        setTimeout(() => {
+          setNotification("");
+        }, 6000);
+
+        return;
+      }
+    };
+
+    // STREAM ERROR
+
+    eventSource.onerror = () => {
+
+      setLoading(false);
+
+      eventSource.close();
+
+      setNotificationType("error");
+
+      setNotification(
+        "Stream connection lost or pipeline interrupted."
+      );
+
+      setTimeout(() => {
+        setNotification("");
+      }, 6000);
+    };
   };
 
   return (
 
-    <div className="max-w-6xl mx-auto mt-10">
+    <div className="max-w-7xl mx-auto mt-10">
+
+      {/* NOTIFICATION */}
+
+      {notification && (
+        <Notification
+          message={notification}
+          type={notificationType}
+        />
+      )}
 
       {/* INPUT SECTION */}
 
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl">
 
         <h2 className="text-3xl font-bold text-white mb-8">
-          Start MCP Analysis
+          Start Pipeline
         </h2>
 
-        <div className="space-y-6">
+        <div>
 
-          <div>
+          <label className="text-slate-300 block mb-4 text-lg font-medium">
+            Project Path
+          </label>
 
-            <label className="text-slate-300 block mb-3">
-              Bitbucket Repository URL
-            </label>
+          <div className="flex flex-col md:flex-row gap-4">
+
+            {/* INPUT */}
 
             <input
               type="text"
-              placeholder="https://bitbucket.org/company/project"
-              value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-600 rounded-xl px-5 py-4 text-white outline-none focus:border-blue-500"
+              placeholder="/home/ubuntu/ApiDemo"
+              value={projectPath}
+              onChange={(e) => setProjectPath(e.target.value)}
+              className="
+                flex-1
+                bg-slate-900
+                border border-slate-600
+                rounded-xl
+                px-5 py-4
+                text-white
+                outline-none
+                focus:border-blue-500
+                transition-all duration-300
+                text-lg
+              "
             />
 
+            {/* BUTTON */}
+
+            <button
+              disabled={loading}
+              onClick={startPipeline}
+              className="
+                bg-blue-600
+                hover:bg-blue-700
+                disabled:opacity-50
+                transition-all duration-300
+                text-white
+                px-8 py-4
+                rounded-xl
+                font-bold
+                text-lg
+                min-w-[240px]
+                shadow-lg
+              "
+            >
+
+              {loading
+                ? "Pipeline Running..."
+                : "Run Pipeline"}
+
+            </button>
+
           </div>
-
-          
-
-         
-
-          <button
-            onClick={handleAnalyze}
-            className="w-full bg-blue-600 hover:bg-blue-700 transition-all duration-300 text-white py-4 rounded-xl font-bold text-lg"
-          >
-            Run MCP Analysis
-          </button>
 
         </div>
 
       </div>
 
-      {/* MAIN LOADER */}
+      {/* RUN ID */}
 
-      {loading && <Loader />}
+      {runId && (
 
-      {/* RESULT SECTION */}
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 mt-6">
 
-      {result && (
-        <>
-          <ResultCard
-            result={result}
-            version={reportVersion}
-          />
+          <p className="text-slate-400">
+            Run ID
+          </p>
 
-          <div className="mt-6 flex justify-end">
+          <p className="text-white mt-2 break-all">
+            {runId}
+          </p>
 
-            <button
-              onClick={() => setShowModify(true)}
-              className="bg-yellow-500 hover:bg-yellow-600 transition-all duration-300 text-white px-6 py-3 rounded-xl font-semibold"
-            >
-              Modify Report
-            </button>
-
-          </div>
-        </>
+        </div>
       )}
 
-      {/* MODIFY MODAL */}
+      {/* LIVE EVENTS */}
 
-      <ModifyModal
-        showModify={showModify}
-        setShowModify={setShowModify}
-        modifyPrompt={modifyPrompt}
-        setModifyPrompt={setModifyPrompt}
-        handleRegenerate={handleRegenerate}
-        regenerating={regenerating}
-      />
+      <div className="space-y-6 mt-8">
+
+        {events.map((event, index) => (
+
+          <ResultCard
+            key={index}
+            event={event}
+          />
+
+        ))}
+
+        {/* LOADER AT BOTTOM */}
+
+        {loading && (
+          <div className="pb-10">
+            <Loader />
+          </div>
+        )}
+
+        {/* AUTO SCROLL TARGET */}
+
+        <div ref={bottomRef}></div>
+
+      </div>
 
     </div>
   );

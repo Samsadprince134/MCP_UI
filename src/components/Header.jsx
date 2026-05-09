@@ -1,16 +1,25 @@
 const Header = () => {
   return (
-    <div className="w-full bg-slate-950 border-b border-slate-700 px-8 py-5">
 
-      <h1 className="text-3xl font-bold text-white">
-        MCP Analysis Dashboard
-      </h1>
+    <header className="w-full bg-slate-900 border-b border-slate-700 py-6 shadow-xl">
 
-      <p className="text-slate-400 mt-2">
-        AI-Powered MCP Report Generation & Human Feedback Loop
-      </p>
+      <div className="max-w-7xl mx-auto px-6 flex justify-center items-center">
 
-    </div>
+        <div className="text-center">
+
+          <h1 className="text-4xl font-bold text-white tracking-wide">
+            Stage 2 Pipeline
+          </h1>
+
+          <p className="text-slate-400 mt-3 text-lg">
+            {/* Real-Time AI Powered JUnit Generation & Validation Monitoring */}
+          </p>
+
+        </div>
+
+      </div>
+
+    </header>
   );
 };
 

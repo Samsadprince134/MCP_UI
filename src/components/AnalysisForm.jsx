@@ -86,7 +86,7 @@ const AnalysisForm = () => {
       setNotificationType("error");
 
       setNotification(
-        "Project path is required. Please enter a valid project directory."
+        "Project path or Bitbucket repository URL is required."
       );
 
       setTimeout(() => {
@@ -156,7 +156,7 @@ const AnalysisForm = () => {
       setNotificationType("error");
 
       setNotification(
-        "Unable to start pipeline. Please check the backend server."
+        "Unable to start MCP pipeline. Please check the backend server."
       );
 
       setTimeout(() => {
@@ -192,7 +192,7 @@ const AnalysisForm = () => {
             data: {
               ...parsedData.data,
               message:
-                "The provided project path does not exist or is invalid. Please enter a correct project directory."
+                "The provided project path or Bitbucket repository URL is invalid or inaccessible."
             }
           }
         ]);
@@ -200,7 +200,7 @@ const AnalysisForm = () => {
         setNotificationType("error");
 
         setNotification(
-          "Invalid project path. Pipeline execution stopped."
+          "Invalid project path or Bitbucket URL. Pipeline execution stopped."
         );
 
         setLoading(false);
@@ -246,8 +246,6 @@ const AnalysisForm = () => {
       if (parsedData.type === "paused") {
 
         setNotificationType("error");
-
-        // DYNAMIC ERROR MESSAGE
 
         const dynamicMessage =
           parsedData.data?.message ||
@@ -328,13 +326,13 @@ const AnalysisForm = () => {
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl">
 
         <h2 className="text-3xl font-bold text-white mb-8">
-          Start Pipeline
+          Start MCP Pipeline
         </h2>
 
         <div>
 
           <label className="text-slate-300 block mb-4 text-lg font-medium">
-            Project Path
+            Project Path or Bitbucket Repository URL
           </label>
 
           <div className="flex flex-col md:flex-row gap-4">
@@ -343,7 +341,7 @@ const AnalysisForm = () => {
 
             <input
               type="text"
-              placeholder="/home/ubuntu/ApiDemo"
+              placeholder="/home/ubuntu/ApiDemo or https://bitbucket.org/company/project.git"
               value={projectPath}
               onChange={(e) => setProjectPath(e.target.value)}
               className="
@@ -382,11 +380,51 @@ const AnalysisForm = () => {
 
               {loading
                 ? "Pipeline Running..."
-                : "Run Pipeline"}
+                : "Run MCP Pipeline"}
 
             </button>
 
           </div>
+
+          {/* HELPER SECTION */}
+
+          {/* <div className="mt-4 bg-slate-900 border border-slate-700 rounded-xl p-4">
+
+            <p className="text-slate-400 text-sm leading-7">
+
+              Supported Inputs:
+
+              <span className="text-blue-400">
+                {" "}Local Project Path
+              </span>
+
+              {" "}or{" "}
+
+              <span className="text-cyan-400">
+                Bitbucket Repository URL
+              </span>
+
+            </p>
+
+            <div className="mt-3 space-y-2 text-sm">
+
+              <p className="text-slate-500 break-all">
+                Example Local Path:
+                <span className="text-slate-300">
+                  {" "}/home/ubuntu/ApiDemo
+                </span>
+              </p>
+
+              <p className="text-slate-500 break-all">
+                Example Bitbucket URL:
+                <span className="text-slate-300">
+                  {" "}https://bitbucket.org/company/project.git
+                </span>
+              </p>
+
+            </div>
+
+          </div> */}
 
         </div>
 
@@ -422,7 +460,7 @@ const AnalysisForm = () => {
 
         ))}
 
-        {/* LOADER AT BOTTOM */}
+        {/* LOADER */}
 
         {loading && (
           <div className="pb-10">

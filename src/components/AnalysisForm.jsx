@@ -6,7 +6,6 @@ import ResultCard from "./ResultCard";
 import Notification from "./Notification";
 
 const AnalysisForm = () => {
-
   const [projectPath, setProjectPath] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -26,9 +25,7 @@ const AnalysisForm = () => {
   // PROFESSIONAL SMOOTH AUTO SCROLL
 
   useEffect(() => {
-
     const smoothScrollToBottom = () => {
-
       const startPosition = window.scrollY;
 
       const targetPosition =
@@ -41,16 +38,11 @@ const AnalysisForm = () => {
       let startTime = null;
 
       const easeInOutCubic = (t) => {
-
-        return t < 0.5
-          ? 4 * t * t * t
-          : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
       };
 
       const animation = (currentTime) => {
-
-        if (!startTime)
-          startTime = currentTime;
+        if (!startTime) startTime = currentTime;
 
         const timeElapsed = currentTime - startTime;
 
@@ -58,10 +50,7 @@ const AnalysisForm = () => {
 
         const ease = easeInOutCubic(progress);
 
-        window.scrollTo(
-          0,
-          startPosition + distance * ease
-        );
+        window.scrollTo(0, startPosition + distance * ease);
 
         if (timeElapsed < duration) {
           requestAnimationFrame(animation);
@@ -72,22 +61,17 @@ const AnalysisForm = () => {
     };
 
     smoothScrollToBottom();
-
   }, [events, loading]);
 
   // START PIPELINE
 
   const startPipeline = async () => {
-
     // EMPTY INPUT VALIDATION
 
     if (!projectPath.trim()) {
-
       setNotificationType("error");
 
-      setNotification(
-        "Project path or Bitbucket repository URL is required."
-      );
+      setNotification("Project path or Bitbucket repository URL is required.");
 
       setTimeout(() => {
         setNotification("");
@@ -97,7 +81,6 @@ const AnalysisForm = () => {
     }
 
     try {
-
       setLoading(true);
 
       setEvents([]);
@@ -107,21 +90,18 @@ const AnalysisForm = () => {
       const response = await axios.post(
         "http://13.127.9.92:8000/api/pipeline/run",
         {
-          project_path: projectPath
-        }
+          project_path: projectPath,
+        },
       );
 
       // INVALID RESPONSE CHECK
 
       if (!response.data?.stream_url) {
-
         setLoading(false);
 
         setNotificationType("error");
 
-        setNotification(
-          "Invalid response received from MCP backend."
-        );
+        setNotification("Invalid response received from MCP backend.");
 
         setTimeout(() => {
           setNotification("");
@@ -134,21 +114,16 @@ const AnalysisForm = () => {
 
       setNotificationType("info");
 
-      setNotification(
-        "Pipeline execution started successfully."
-      );
+      setNotification("Pipeline execution started successfully.");
 
       setTimeout(() => {
         setNotification("");
       }, 4000);
 
-      const streamUrl =
-        `http://13.127.9.92:8000${response.data.stream_url}`;
+      const streamUrl = `http://13.127.9.92:8000${response.data.stream_url}`;
 
       connectToStream(streamUrl);
-
     } catch (error) {
-
       console.log(error);
 
       setLoading(false);
@@ -156,7 +131,7 @@ const AnalysisForm = () => {
       setNotificationType("error");
 
       setNotification(
-        "Unable to start MCP pipeline. Please check the backend server."
+        "Unable to start MCP pipeline. Please check the backend server.",
       );
 
       setTimeout(() => {
@@ -168,11 +143,9 @@ const AnalysisForm = () => {
   // CONNECT TO SSE STREAM
 
   const connectToStream = (url) => {
-
     const eventSource = new EventSource(url);
 
     eventSource.onmessage = (event) => {
-
       if (!event.data) return;
 
       const parsedData = JSON.parse(event.data);
@@ -181,10 +154,7 @@ const AnalysisForm = () => {
 
       // INPUT ERROR → STOP EVERYTHING
 
-      if (
-        parsedData.data?.stage === "input_error"
-      ) {
-
+      if (parsedData.data?.stage === "input_error") {
         setEvents((prev) => [
           ...prev,
           {
@@ -192,15 +162,15 @@ const AnalysisForm = () => {
             data: {
               ...parsedData.data,
               message:
-                "The provided project path or Bitbucket repository URL is invalid or inaccessible."
-            }
-          }
+                "The provided project path or Bitbucket repository URL is invalid or inaccessible.",
+            },
+          },
         ]);
 
         setNotificationType("error");
 
         setNotification(
-          "Invalid project path or Bitbucket URL. Pipeline execution stopped."
+          "Invalid project path or Bitbucket URL. Pipeline execution stopped.",
         );
 
         setLoading(false);
@@ -221,13 +191,12 @@ const AnalysisForm = () => {
       // PIPELINE FAILED
 
       if (parsedData.type === "failed") {
-
         setNotificationType("error");
 
         setNotification(
           parsedData.data?.message ||
-          parsedData.data?.error ||
-          "Pipeline execution failed."
+            parsedData.data?.error ||
+            "Pipeline execution failed.",
         );
 
         setLoading(false);
@@ -244,7 +213,6 @@ const AnalysisForm = () => {
       // PIPELINE PAUSED
 
       if (parsedData.type === "paused") {
-
         setNotificationType("error");
 
         const dynamicMessage =
@@ -268,12 +236,11 @@ const AnalysisForm = () => {
       // PIPELINE COMPLETED
 
       if (parsedData.type === "completed") {
-
         setNotificationType("success");
 
         setNotification(
           parsedData.data?.message ||
-          "Pipeline execution completed successfully."
+            "Pipeline execution completed successfully.",
         );
 
         setLoading(false);
@@ -291,16 +258,13 @@ const AnalysisForm = () => {
     // STREAM ERROR
 
     eventSource.onerror = () => {
-
       setLoading(false);
 
       eventSource.close();
 
       setNotificationType("error");
 
-      setNotification(
-        "Stream connection lost or pipeline interrupted."
-      );
+      setNotification("Stream connection lost or pipeline interrupted.");
 
       setTimeout(() => {
         setNotification("");
@@ -309,34 +273,26 @@ const AnalysisForm = () => {
   };
 
   return (
-
     <div className="max-w-7xl mx-auto mt-10">
-
       {/* NOTIFICATION */}
 
       {notification && (
-        <Notification
-          message={notification}
-          type={notificationType}
-        />
+        <Notification message={notification} type={notificationType} />
       )}
 
       {/* INPUT SECTION */}
 
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl">
-
         <h2 className="text-3xl font-bold text-white mb-8">
-          Start MCP Pipeline
+          Start Pipeline
         </h2>
 
         <div>
-
           <label className="text-slate-300 block mb-4 text-lg font-medium">
             Project Path or Bitbucket Repository URL
           </label>
 
           <div className="flex flex-col md:flex-row gap-4">
-
             {/* INPUT */}
 
             <input
@@ -345,17 +301,18 @@ const AnalysisForm = () => {
               value={projectPath}
               onChange={(e) => setProjectPath(e.target.value)}
               className="
-                flex-1
-                bg-slate-900
-                border border-slate-600
-                rounded-xl
-                px-5 py-4
-                text-white
-                outline-none
-                focus:border-blue-500
-                transition-all duration-300
-                text-lg
-              "
+  flex-1
+  bg-slate-900
+  border border-slate-600
+  rounded-xl
+  px-5 py-4
+  text-white
+  placeholder:text-slate-700
+  outline-none
+  focus:border-blue-500
+  transition-all duration-300
+  text-lg
+"
             />
 
             {/* BUTTON */}
@@ -377,13 +334,8 @@ const AnalysisForm = () => {
                 shadow-lg
               "
             >
-
-              {loading
-                ? "Pipeline Running..."
-                : "Run MCP Pipeline"}
-
+              {loading ? "Pipeline Running..." : "Run Pipeline"}
             </button>
-
           </div>
 
           {/* HELPER SECTION */}
@@ -425,39 +377,24 @@ const AnalysisForm = () => {
             </div>
 
           </div> */}
-
         </div>
-
       </div>
 
       {/* RUN ID */}
 
       {runId && (
-
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 mt-6">
+          <p className="text-slate-400">Run ID</p>
 
-          <p className="text-slate-400">
-            Run ID
-          </p>
-
-          <p className="text-white mt-2 break-all">
-            {runId}
-          </p>
-
+          <p className="text-white mt-2 break-all">{runId}</p>
         </div>
       )}
 
       {/* LIVE EVENTS */}
 
       <div className="space-y-6 mt-8">
-
         {events.map((event, index) => (
-
-          <ResultCard
-            key={index}
-            event={event}
-          />
-
+          <ResultCard key={index} event={event} />
         ))}
 
         {/* LOADER */}
@@ -471,9 +408,7 @@ const AnalysisForm = () => {
         {/* AUTO SCROLL TARGET */}
 
         <div ref={bottomRef}></div>
-
       </div>
-
     </div>
   );
 };
